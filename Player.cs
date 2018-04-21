@@ -16,6 +16,24 @@ class Player
     public static int TouchedSite { get; set; }
     public static List<Unit> Units { get; set; }
 
+    public static Unit FriendlyQueen
+    {
+        get
+        {
+            return Units.First(u => u.unitType == -1
+                && u.owner == 0);
+        }
+    }
+
+    public static Unit EnemyQueen
+    {
+        get
+        {
+            return Units.First(u => u.unitType == -1
+                && u.owner == 1);
+        }
+    }
+
     static void Main(string[] args)
     {
         string[] inputs;
@@ -53,9 +71,16 @@ class Player
 
 
             // First line: A valid queen action
-            if (false)
+            if (TouchedSite == -1 || Sites.First(s => s.siteId == TouchedSite).structureType >= 0)
             {
-
+                // Go to an empty site
+                Site site = FriendlyQueen.nearestSite(-1);
+                Console.WriteLine($"MOVE {site.x} {site.y}");
+            }
+            else if (Sites.First(s => s.siteId == TouchedSite).structureType == -1)
+            {
+                // Build a knight barracks on the empty touched site
+                Console.WriteLine($"BUILD {TouchedSite} BARRACKS-KNIGHT");
             }
             else
             {
@@ -63,9 +88,16 @@ class Player
             }
 
             // Second line: A set of training instruction
-            if (false)
+            if (Gold >= 80 && Sites.Count(s => s.structureType == 2 && s.owner == 0) > 0)
             {
+                // Train knights at barracks closest to enemy queen
+                var friendlyBarracks = Sites
+                    .OrderBy(s => s.distanceFrom(EnemyQueen))
+                    .Where(s => s.owner == 0 && s.structureType == 2)
+                    .Take(Gold / 80);
+                string barracksIds = string.Join(" ", friendlyBarracks.Select(b => b.siteId).ToArray());
 
+                Console.WriteLine($"TRAIN {barracksIds}");
             }
             else
             {
@@ -75,17 +107,14 @@ class Player
     }
 }
 
-class Site
+class Site : Physical
 {
     public int siteId { get; set; }
-    public int x { get; set; }
-    public int y { get; set; }
     public int radius { get; set; }
 
     public int ignore1 { get; set; } // used in future leagues
     public int ignore2 { get; set; } // used in future leagues
     public int structureType { get; set; } // -1 = No structure, 2 = Barracks
-    public int owner { get; set; } // -1 = No structure, 0 = Friendly, 1 = Enemy
     public int param1 { get; set; }
     public int param2 { get; set; }
 
@@ -109,11 +138,9 @@ class Site
     }
 }
 
-class Unit
+class Unit : Physical
 {
-    public int x { get; set; }
-    public int y { get; set; }
-    public int owner { get; set; }
+
     public int unitType { get; set; } // -1 = QUEEN, 0 = KNIGHT, 1 = ARCHER
     public int health { get; set; }
 
@@ -124,5 +151,48 @@ class Unit
         owner = int.Parse(inputs[2]);
         unitType = int.Parse(inputs[3]);
         health = int.Parse(inputs[4]);
+    }
+
+    public Unit nearestUnit(int unitType)
+    {
+        var unit = Player.Units
+            .OrderBy(u => u.distanceFrom(this))
+            .First(u => u.unitType == unitType);
+        return unit;
+    }
+
+    public Unit nearestUnit(int unitType, int owner)
+    {
+        var unit = Player.Units
+            .OrderBy(u => u.distanceFrom(this))
+            .First(u => u.unitType == unitType
+                && u.owner == owner);
+        return unit;
+    }
+
+    public Site nearestSite(int structureType)
+    {
+        var site = Player.Sites
+            .OrderBy(s => s.distanceFrom(this))
+            .First(s => s.structureType == structureType);
+        return site;
+    }
+}
+
+class Physical
+{
+    public int x { get; set; }
+    public int y { get; set; }
+    public int owner { get; set; } // -1 = No structure, 0 = Friendly, 1 = Enemy
+
+    public int distanceFrom(Physical p)
+    {
+        int xDistance = Math.Abs(p.x - this.x);
+        int yDistance = Math.Abs(p.y - this.y);
+
+        if (xDistance + yDistance == 0)
+            return 0;
+
+        return Convert.ToInt32(Math.Sqrt((xDistance * xDistance) + (yDistance * yDistance)));
     }
 }
