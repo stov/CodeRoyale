@@ -71,13 +71,56 @@ class Player
 
 
             // First line: A valid queen action
-            if (TouchedSite == -1 || Sites.First(s => s.siteId == TouchedSite).structureType >= 0)
+            /*if (Sites.Count(s => s.owner == 0 && s.structureType == 2) >= 2
+                && Sites.Count(s => s.owner == 1 && s.structureType == 2) >= 1)
+            {
+                // I have 2 barracks, destroy enemy barracks
+                Site site = FriendlyQueen.nearestSite(2, 1);
+                Console.WriteLine($"MOVE {site.x} {site.y}");
+            }
+            else*/
+            if (Sites.Count(s => s.owner == 0 && s.structureType == 2) >= 3)
+            {
+                // We have 3 barracks, protect the queen
+                Site site;
+
+                if (Sites.Count(s => s.owner == 1 && s.structureType == 2) > 0)
+                {
+                    site = Sites
+                        .OrderByDescending(s => s.distanceFrom(FriendlyQueen.nearestSite(2, 1)))
+                        .First(s => s.owner == 0 && s.structureType == 2);
+                }
+                else
+                {
+                    site = FriendlyQueen.nearestSite(2, 0);
+                }
+
+                //if (TouchedSite == )
+                //{
+                    Console.WriteLine($"BUILD {site.siteId} TOWER");
+                /*}
+                else
+                {
+                    Console.WriteLine($"MOVE {site.x} {site.y}");
+                }*/
+            }
+            else if (TouchedSite == -1 || Sites.First(s => s.siteId == TouchedSite).structureType >= 0)
             {
                 // Go to an empty site
                 Site site = FriendlyQueen.nearestSite(-1);
                 Console.WriteLine($"MOVE {site.x} {site.y}");
             }
+            else if (Sites.Count(s => s.owner == 0 && s.structureType == 2) == 0)
+            {
+                // Build knights first
+                Console.WriteLine($"BUILD {TouchedSite} BARRACKS-KNIGHT");
+            }
             else if (Sites.First(s => s.siteId == TouchedSite).structureType == -1)
+            {
+                // More knights!
+                Console.WriteLine($"BUILD {TouchedSite} BARRACKS-KNIGHT");
+            }
+            else if (Sites.Count(s => s.owner == 1) == 0)
             {
                 // Build a knight barracks on the empty touched site
                 Console.WriteLine($"BUILD {TouchedSite} BARRACKS-KNIGHT");
@@ -175,6 +218,15 @@ class Unit : Physical
         var site = Player.Sites
             .OrderBy(s => s.distanceFrom(this))
             .First(s => s.structureType == structureType);
+        return site;
+    }
+
+    public Site nearestSite(int structureType, int owner)
+    {
+        var site = Player.Sites
+            .OrderBy(s => s.distanceFrom(this))
+            .First(s => s.structureType == structureType
+                && s.owner == owner);
         return site;
     }
 }
