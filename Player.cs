@@ -5,34 +5,36 @@ using System.Text;
 using System.Collections;
 using System.Collections.Generic;
 
-/**
- * Auto-generated code below aims at helping you parse
- * the standard input according to the problem statement.
- **/
 class Player
 {
+    static void QueenAction()
+    {
+        if (false)
+        {
+            
+        }
+        else
+        {
+            Console.WriteLine("WAIT");
+        }
+    }
+
+    static void TrainingAction()
+    {
+        if (false)
+        {
+            
+        }
+        else
+        {
+            Console.WriteLine("TRAIN");
+        }
+    }
+
     public static List<Site> Sites { get; set; }
     public static int Gold { get; set; }
     public static int TouchedSite { get; set; }
     public static List<Unit> Units { get; set; }
-
-    public static Unit FriendlyQueen
-    {
-        get
-        {
-            return Units.First(u => u.unitType == -1
-                && u.owner == 0);
-        }
-    }
-
-    public static Unit EnemyQueen
-    {
-        get
-        {
-            return Units.First(u => u.unitType == -1
-                && u.owner == 1);
-        }
-    }
 
     static void Main(string[] args)
     {
@@ -43,7 +45,7 @@ class Player
         for (int i = 0; i < numSites; i++)
         {
             Sites.Add(new Site(Console.ReadLine().Split(' ')));
-    }
+        }
 
         // game loop
         while (true)
@@ -69,85 +71,62 @@ class Player
             // Write an action using Console.WriteLine()
             // To debug: Console.Error.WriteLine("Debug messages...");
 
+            
 
             // First line: A valid queen action
-            /*if (Sites.Count(s => s.owner == 0 && s.structureType == 2) >= 2
-                && Sites.Count(s => s.owner == 1 && s.structureType == 2) >= 1)
-            {
-                // I have 2 barracks, destroy enemy barracks
-                Site site = FriendlyQueen.nearestSite(2, 1);
-                Console.WriteLine($"MOVE {site.x} {site.y}");
-            }
-            else*/
-            if (Sites.Count(s => s.owner == 0 && s.structureType == 2) >= 3)
-            {
-                // We have 3 barracks, protect the queen
-                Site site;
-
-                if (Sites.Count(s => s.owner == 1 && s.structureType == 2) > 0)
-                {
-                    site = Sites
-                        .OrderByDescending(s => s.distanceFrom(FriendlyQueen.nearestSite(2, 1)))
-                        .First(s => s.owner == 0 && s.structureType == 2);
-                }
-                else
-                {
-                    site = FriendlyQueen.nearestSite(2, 0);
-                }
-
-                //if (TouchedSite == )
-                //{
-                    Console.WriteLine($"BUILD {site.siteId} TOWER");
-                /*}
-                else
-                {
-                    Console.WriteLine($"MOVE {site.x} {site.y}");
-                }*/
-            }
-            else if (TouchedSite == -1 || Sites.First(s => s.siteId == TouchedSite).structureType >= 0)
-            {
-                // Go to an empty site
-                Site site = FriendlyQueen.nearestSite(-1);
-                Console.WriteLine($"MOVE {site.x} {site.y}");
-            }
-            else if (Sites.Count(s => s.owner == 0 && s.structureType == 2) == 0)
-            {
-                // Build knights first
-                Console.WriteLine($"BUILD {TouchedSite} BARRACKS-KNIGHT");
-            }
-            else if (Sites.First(s => s.siteId == TouchedSite).structureType == -1)
-            {
-                // More knights!
-                Console.WriteLine($"BUILD {TouchedSite} BARRACKS-KNIGHT");
-            }
-            else if (Sites.Count(s => s.owner == 1) == 0)
-            {
-                // Build a knight barracks on the empty touched site
-                Console.WriteLine($"BUILD {TouchedSite} BARRACKS-KNIGHT");
-            }
-            else
-            {
-                Console.WriteLine("WAIT");
-            }
+            QueenAction();
 
             // Second line: A set of training instruction
-            if (Gold >= 80 && Sites.Count(s => s.structureType == 2 && s.owner == 0) > 0)
-            {
-                // Train knights at barracks closest to enemy queen
-                var friendlyBarracks = Sites
-                    .OrderBy(s => s.distanceFrom(EnemyQueen))
-                    .Where(s => s.owner == 0 && s.structureType == 2)
-                    .Take(Gold / 80);
-                string barracksIds = string.Join(" ", friendlyBarracks.Select(b => b.siteId).ToArray());
-
-                Console.WriteLine($"TRAIN {barracksIds}");
-            }
-            else
-            {
-                Console.WriteLine("TRAIN");
-            }
+            TrainingAction();
         }
     }
+
+    public static Unit FriendlyQueen
+    {
+        get
+        {
+            return Units.First(u => u.unitType == UnitType.Queen
+                && u.owner == OwnerType.Friendly);
+        }
+    }
+
+    public static Unit EnemyQueen
+    {
+        get
+        {
+            return Units.First(u => u.unitType == UnitType.Queen
+                && u.owner == OwnerType.Enemy);
+        }
+    }
+
+    public IEnumerable<Site> VacantSites
+    {
+        get
+        {
+            return Sites.Where(s => s.owner == OwnerType.None);
+        }
+    }
+
+    public IEnumerable<Site> FriendlySites
+    {
+        get
+        {
+            return Sites.Where(s => s.owner == OwnerType.Friendly);
+        }
+    }
+
+    public IEnumerable<Site> EnemySites
+    {
+        get
+        {
+            return Sites.Where(s => s.owner == OwnerType.Enemy);
+        }
+    }
+}
+
+enum StructureType
+{
+    None = -1, Goldmine, Tower, Barracks
 }
 
 class Site : Physical
@@ -157,10 +136,26 @@ class Site : Physical
 
     public int ignore1 { get; set; } // used in future leagues
     public int ignore2 { get; set; } // used in future leagues
-    public int structureType { get; set; } // -1 = No structure, 2 = Barracks
+    public StructureType structureType { get; set; } // -1 = No structure, 0 = Goldmine, 1 = Tower, 2 = Barracks
     public int param1 { get; set; }
+    /* When no structure: -1
+    When goldmine: the income rate ranging from 1 to 5 (or -1 if enemy)
+    When tower: the remaining HP
+    When barracks, the number of turns before a new set of creeps can be trained(if 0, then training may be started this turn)
+    */
     public int param2 { get; set; }
+    /*
+    When no structure: -1
+    When goldmine: -1
+    When tower: the attack radius measured from its center
+    When barracks: the creep type: 0 for KNIGHT, 1 for ARCHER, 2 for GIANT
+    */
 
+    public Site()
+    {
+
+    }
+    
     public Site(string[] inputs)
     {
         siteId = int.Parse(inputs[0]);
@@ -171,32 +166,95 @@ class Site : Physical
 
     public void Update(string[] inputs)
     {
-        //siteId = int.Parse(inputs[0]);
-        ignore1 = int.Parse(inputs[1]); // used in future leagues
-        ignore2 = int.Parse(inputs[2]); // used in future leagues
-        structureType = int.Parse(inputs[3]); // -1 = No structure, 2 = Barracks
-        owner = int.Parse(inputs[4]); // -1 = No structure, 0 = Friendly, 1 = Enemy
+        ignore1 = int.Parse(inputs[1]);
+        ignore2 = int.Parse(inputs[2]);
+        structureType = (StructureType)int.Parse(inputs[3]);
+        owner = (OwnerType)int.Parse(inputs[4]);
         param1 = int.Parse(inputs[5]);
         param2 = int.Parse(inputs[6]);
     }
 }
 
+class GoldMine : Site
+{
+    public int IncomeRate
+    {
+        get
+        {
+            return param1;
+        }
+    }
+}
+
+enum CreepType
+{
+    Knight, Archer, Giant
+}
+
+class Barracks : Site
+{
+    public CreepType CreepType
+    {
+        get
+        {
+            return (CreepType)param2;
+        }
+    }
+
+    public int Cooldown
+    {
+        get
+        {
+            return param1;
+        }
+    }
+}
+
+class Tower : Site
+{
+    public int HP
+    {
+        get
+        {
+            return param1;
+        }
+    }
+
+    public int Range
+    {
+        get
+        {
+            return param2;
+        }
+    }
+}
+
+enum UnitType
+{
+    Queen = -1, Knight, Archer
+}
+
 class Unit : Physical
 {
 
-    public int unitType { get; set; } // -1 = QUEEN, 0 = KNIGHT, 1 = ARCHER
+    public UnitType unitType { get; set; } // -1 = QUEEN, 0 = KNIGHT, 1 = ARCHER
     public int health { get; set; }
+
+    public Unit()
+    {
+
+    }
 
     public Unit(string[] inputs)
     {
         x = int.Parse(inputs[0]);
         y = int.Parse(inputs[1]);
-        owner = int.Parse(inputs[2]);
-        unitType = int.Parse(inputs[3]);
+        owner = (OwnerType)int.Parse(inputs[2]);
+        unitType = (UnitType)int.Parse(inputs[3]);
         health = int.Parse(inputs[4]);
     }
 
-    public Unit nearestUnit(int unitType)
+    public Unit nearestUnit(UnitType unitType)
     {
         var unit = Player.Units
             .OrderBy(u => u.distanceFrom(this))
@@ -204,7 +262,7 @@ class Unit : Physical
         return unit;
     }
 
-    public Unit nearestUnit(int unitType, int owner)
+    public Unit nearestUnit(UnitType unitType, OwnerType owner)
     {
         var unit = Player.Units
             .OrderBy(u => u.distanceFrom(this))
@@ -213,7 +271,7 @@ class Unit : Physical
         return unit;
     }
 
-    public Site nearestSite(int structureType)
+    public Site nearestSite(StructureType structureType)
     {
         var site = Player.Sites
             .OrderBy(s => s.distanceFrom(this))
@@ -221,7 +279,7 @@ class Unit : Physical
         return site;
     }
 
-    public Site nearestSite(int structureType, int owner)
+    public Site nearestSite(StructureType structureType, OwnerType owner)
     {
         var site = Player.Sites
             .OrderBy(s => s.distanceFrom(this))
@@ -231,11 +289,15 @@ class Unit : Physical
     }
 }
 
+enum OwnerType
+{
+    None = -1, Friendly, Enemy
+}
 class Physical
 {
     public int x { get; set; }
     public int y { get; set; }
-    public int owner { get; set; } // -1 = No structure, 0 = Friendly, 1 = Enemy
+    public OwnerType owner { get; set; } // -1 = No structure, 0 = Friendly, 1 = Enemy
 
     public int distanceFrom(Physical p)
     {
