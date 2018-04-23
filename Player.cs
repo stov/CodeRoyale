@@ -9,48 +9,55 @@ class Player
 {
     static void QueenAction()
     {
-        if (FriendlyGoldmines.Count() < 2)
+        if (TouchedSite != -1
+            && CurrentSite.structureType == StructureType.Goldmine
+            && CurrentSite.owner == OwnerType.Friendly
+            && (new GoldMine(CurrentSite)).incomeRate < (CurrentSite.radius - 60) / 25)
+        {
+            Console.WriteLine($"BUILD {CurrentSite.siteId} MINE");
+        }
+        else if (FriendlyGoldmines.Count() < 2)
         {
             Site site = FriendlyQueen.nearestSite(StructureType.None);
             Console.WriteLine($"BUILD {site.siteId} MINE");
         }
-        else if (FriendlyBarracks.Count() >= 2 && FriendlyTowers.Count() >= 5)
+        /*else if (FriendlyBarracks.Count() >= 2 && FriendlyTowers.Count() >= 5)
         {
             Site site = FriendlyTowers
                 .OrderByDescending(s => s.distanceFrom(FriendlyQueen.nearestSite(StructureType.Barracks, OwnerType.Enemy)))
                 .First();
 
             Console.WriteLine($"BUILD {site.siteId} TOWER");
-        }
+        }*/
         else if (FriendlyBarracks.Count() >= 2)
         {
-            // Protect the queen
-            Site site;
+            var siteId = -1;
 
-            if (EnemyBarracks.Count() > 0)
+            // Protect the queen
+            Site site = FriendlyBarracks
+                .OrderByDescending(s => s.distanceFrom(FriendlyQueen.nearestSite(StructureType.Barracks, OwnerType.Enemy)))
+                .First();
+
+            siteId = site.siteId;
+
+            if (FriendlyTowers.Count() >= 5)
             {
-                site = FriendlyBarracks
-                    .OrderByDescending(s => s.distanceFrom(FriendlyQueen.nearestSite(StructureType.Barracks, OwnerType.Enemy)))
+                var tower = FriendlyTowers
+                    .OrderByDescending(s => s.distanceFrom(EnemyQueen))
+                    .Where(s => s.range < 300) // Need to check/adjust this
                     .First();
 
-                if (EnemyTowers.Count() > 0)
-                {
-                    Site nearestEnemyTower = FriendlyQueen.nearestSite(StructureType.Tower, OwnerType.Enemy);
-
-                    if (FriendlyQueen.distanceFrom(nearestEnemyTower) < FriendlyQueen.distanceFrom(site))
-                    {
-                        site = nearestEnemyTower;
-                    }
-                }
-
-                //Console.WriteLine($"MOVE {site.x} {site.y}");
-                Console.WriteLine($"BUILD {site.siteId} TOWER");
+                siteId = tower.siteId;
             }
-            else
-            {
-                site = FriendlyQueen.nearestSite(StructureType.Barracks, OwnerType.Friendly);
-                Console.WriteLine($"BUILD {site.siteId} TOWER");
-            }
+
+            Console.WriteLine($"BUILD {siteId} TOWER");
+        }
+        else if (FriendlyBarracks.Count() == 1
+            && FriendlyQueen.nearestSite(StructureType.None).distanceFrom(EnemyQueen) > FriendlyBarracks.First().distanceFrom(EnemyQueen))
+        {
+            Site site = FriendlyQueen.nearestSite(StructureType.None);
+
+            Console.WriteLine($"BUILD {site.siteId} TOWER");
         }
         else if (TouchedSite == -1 || CurrentSite.structureType != StructureType.None)
         {
@@ -85,6 +92,7 @@ class Player
             {
                 // Train knights at barracks closest to enemy queen
                 var friendlyBarracksClosestToEnemy = FriendlyBarracks
+                    .Where(s => s.creepType == CreepType.Knight)
                     .OrderBy(s => s.distanceFrom(EnemyQueen))
                     .Take(Gold / 80);
 
@@ -166,6 +174,87 @@ class Player
         }
     }
 
+    public static IEnumerable<Barracks> Barracks
+    {
+        get
+        {
+            return Sites
+                .Where(s => s.structureType == StructureType.Barracks)
+                .Select(s => new Barracks(s))
+                .Cast<Barracks>();
+        }
+    }
+
+    public static IEnumerable<GoldMine> Goldmines
+    {
+        get
+        {
+            return Sites
+                .Where(s => s.structureType == StructureType.Goldmine)
+                .Select(s => new GoldMine(s))
+                .Cast<GoldMine>();
+        }
+    }
+
+    public static IEnumerable<Tower> Towers
+    {
+        get
+        {
+            return Sites
+                .Where(s => s.structureType == StructureType.Tower)
+                .Select(s => new Tower(s))
+                .Cast<Tower>();
+        }
+    }
+
+    public static IEnumerable<Barracks> FriendlyBarracks
+    {
+        get
+        {
+            return Barracks.Where(s => s.owner == OwnerType.Friendly);
+        }
+    }
+
+    public static IEnumerable<GoldMine> FriendlyGoldmines
+    {
+        get
+        {
+            return Goldmines.Where(s => s.owner == OwnerType.Friendly);
+        }
+    }
+
+    public static IEnumerable<Tower> FriendlyTowers
+    {
+        get
+        {
+            return Towers.Where(s => s.owner == OwnerType.Friendly);
+        }
+    }
+
+    public static IEnumerable<Barracks> EnemyBarracks
+    {
+        get
+        {
+            return Barracks.Where(s => s.owner == OwnerType.Enemy);
+        }
+    }
+
+    public static IEnumerable<GoldMine> EnemyGoldmines
+    {
+        get
+        {
+            return Goldmines.Where(s => s.owner == OwnerType.Enemy);
+        }
+    }
+
+    public static IEnumerable<Tower> EnemyTowers
+    {
+        get
+        {
+            return Towers.Where(s => s.owner == OwnerType.Enemy);
+        }
+    }
+
     public IEnumerable<Site> VacantSites
     {
         get
@@ -182,51 +271,11 @@ class Player
         }
     }
 
-    public static IEnumerable<Site> FriendlyBarracks
-    {
-        get
-        {
-            return FriendlySites.Where(s => s.structureType == StructureType.Barracks);
-        }
-    }
-
-    public static IEnumerable<Site> FriendlyGoldmines
-    {
-        get
-        {
-            return FriendlySites.Where(s => s.structureType == StructureType.Goldmine);
-        }
-    }
-
-    public static IEnumerable<Site> FriendlyTowers
-    {
-        get
-        {
-            return FriendlySites.Where(s => s.structureType == StructureType.Tower);
-        }
-    }
-
     public static IEnumerable<Site> EnemySites
     {
         get
         {
             return Sites.Where(s => s.owner == OwnerType.Enemy);
-        }
-    }
-
-    public static IEnumerable<Site> EnemyBarracks
-    {
-        get
-        {
-            return EnemySites.Where(s => s.structureType == StructureType.Barracks);
-        }
-    }
-
-    public static IEnumerable<Site> EnemyTowers
-    {
-        get
-        {
-            return EnemySites.Where(s => s.structureType == StructureType.Tower);
         }
     }
 
@@ -292,7 +341,21 @@ class Site : Physical
 
 class GoldMine : Site
 {
-    public int IncomeRate
+    public GoldMine(Site site)
+    {
+        this.siteId = site.siteId;
+        this.x = site.x;
+        this.y = site.y;
+        this.radius = site.radius;
+        this.ignore1 = site.ignore1;
+        this.ignore2 = site.ignore2;
+        this.structureType = site.structureType;
+        this.owner = site.owner;
+        this.param1 = site.param1;
+        this.param2 = site.param2;
+    }
+
+    public int incomeRate
     {
         get
         {
@@ -308,7 +371,21 @@ enum CreepType
 
 class Barracks : Site
 {
-    public CreepType CreepType
+    public Barracks(Site site)
+    {
+        this.siteId = site.siteId;
+        this.x = site.x;
+        this.y = site.y;
+        this.radius = site.radius;
+        this.ignore1 = site.ignore1;
+        this.ignore2 = site.ignore2;
+        this.structureType = site.structureType;
+        this.owner = site.owner;
+        this.param1 = site.param1;
+        this.param2 = site.param2;
+    }
+
+    public CreepType creepType
     {
         get
         {
@@ -316,7 +393,7 @@ class Barracks : Site
         }
     }
 
-    public int Cooldown
+    public int cooldown
     {
         get
         {
@@ -327,7 +404,21 @@ class Barracks : Site
 
 class Tower : Site
 {
-    public int HP
+    public Tower(Site site)
+    {
+        this.siteId = site.siteId;
+        this.x = site.x;
+        this.y = site.y;
+        this.radius = site.radius;
+        this.ignore1 = site.ignore1;
+        this.ignore2 = site.ignore2;
+        this.structureType = site.structureType;
+        this.owner = site.owner;
+        this.param1 = site.param1;
+        this.param2 = site.param2;
+    }
+
+    public int hp
     {
         get
         {
@@ -335,7 +426,7 @@ class Tower : Site
         }
     }
 
-    public int Range
+    public int range
     {
         get
         {
