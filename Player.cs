@@ -33,6 +33,16 @@ class Player
                     .OrderByDescending(s => s.distanceFrom(FriendlyQueen.nearestSite(StructureType.Barracks, OwnerType.Enemy)))
                     .First();
 
+                if (EnemyTowers.Count() > 0)
+                {
+                    Site nearestEnemyTower = FriendlyQueen.nearestSite(StructureType.Tower, OwnerType.Enemy);
+
+                    if (FriendlyQueen.distanceFrom(nearestEnemyTower) < FriendlyQueen.distanceFrom(site))
+                    {
+                        site = nearestEnemyTower;
+                    }
+                }
+
                 //Console.WriteLine($"MOVE {site.x} {site.y}");
                 Console.WriteLine($"BUILD {site.siteId} TOWER");
             }
@@ -209,6 +219,14 @@ class Player
         get
         {
             return EnemySites.Where(s => s.structureType == StructureType.Barracks);
+        }
+    }
+
+    public static IEnumerable<Site> EnemyTowers
+    {
+        get
+        {
+            return EnemySites.Where(s => s.structureType == StructureType.Tower);
         }
     }
 
