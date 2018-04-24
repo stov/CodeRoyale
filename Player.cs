@@ -27,7 +27,7 @@ class Player
         else if (FriendlyBarracks.Count() == 0)
         {
             var site = FriendlyQueen.nearestSite(StructureType.None, OwnerType.None);
-            Console.WriteLine($"BUILD {site.siteId} BARRACKS-ARCHER");
+            Console.WriteLine($"BUILD {site.siteId} BARRACKS-KNIGHT");
         }
         else if (FriendlyTowers.Count() == 0)
         {
@@ -35,32 +35,62 @@ class Player
             Console.WriteLine($"BUILD {site.siteId} TOWER");
         }
         else if (TouchedSite != -1 && CurrentSite.structureType == StructureType.Tower && CurrentSite.owner == OwnerType.Friendly
-            && (new Tower(CurrentSite)).range < 400)
+            && (new Tower(CurrentSite)).hp < 300
+            && FriendlyTowers.Count() <= 3)
         {
             Console.WriteLine($"BUILD {CurrentSite.siteId} TOWER");
         }
-        else if (FriendlyTowers.Count() <= 2)
+        else if (TouchedSite != -1 && CurrentSite.structureType == StructureType.Tower && CurrentSite.owner == OwnerType.Friendly
+            && (new Tower(CurrentSite)).hp < 600
+            && FriendlyTowers.Count() <= 4)
         {
-            var site = VacantSites
-                .OrderByDescending(s => s.distanceFrom(EnemyQueen))
-                .Where(s => s.distanceFrom(EnemyQueen) < EnemyQueen.distanceFrom(FriendlyQueen))
-                .Where(s => s.distanceFrom(s.nearestSite(StructureType.Tower, OwnerType.Enemy)) > 400)
-                .First();
+            Console.WriteLine($"BUILD {CurrentSite.siteId} TOWER");
+        }
+        else if (FriendlyTowers.Count() <= 3)
+        {
+            var site = FriendlyQueen.nearestSite(StructureType.None);
             Console.WriteLine($"BUILD {site.siteId} TOWER");
         }
         else if (FriendlyBarracks.Where(s => s.creepType == CreepType.Knight).Count() == 0)
         {
-            var site = FriendlyQueen.nearestSite(StructureType.None);
+            var site = FriendlyQueen.nearestSite(StructureType.None, OwnerType.None);
             Console.WriteLine($"BUILD {site.siteId} BARRACKS-KNIGHT");
         }
         else if (FriendlyGoldmines.Count() < 2)
         {
-            var site = VacantSites
+            /*var site = VacantSites
                 .OrderBy(s => s.distanceFrom(FriendlyQueen))
                 .Where(s => s.distanceFrom(EnemyQueen) > EnemyQueen.distanceFrom(FriendlyQueen))
                 .Where(s => s.distanceFrom(s.nearestSite(StructureType.Tower, OwnerType.Enemy)) > 400)
-                .First();
+                .First();*/
+            var site = FriendlyQueen.nearestSite(StructureType.None, OwnerType.None);
             Console.WriteLine($"BUILD {site.siteId} MINE");
+        }
+        else if (FriendlyBarracks.Where(s => s.creepType == CreepType.Giant).Count() == 0)
+        {
+            var site = FriendlyQueen.nearestSite(StructureType.None, OwnerType.None);
+            Console.WriteLine($"BUILD {site.siteId} BARRACKS-GIANT");
+        }
+        else if (FriendlyTowers.Where(s => s.hp < 300).Count() > 0)
+        {
+            var site = FriendlyTowers
+                .OrderBy(s => s.hp)
+                .Where(s => s.hp < 300)
+                .First();
+            Console.WriteLine($"BUILD {site.siteId} TOWER");
+        }
+        else if (FriendlyBarracks.Where(s => s.creepType == CreepType.Giant).Count() == 0)
+        {
+            var site = FriendlyQueen.nearestSite(StructureType.None, OwnerType.None);
+            Console.WriteLine($"BUILD {site.siteId} BARRACKS-GIANT");
+        }
+        else if (FriendlyTowers.Where(s => s.hp < 300).Count() > 0)
+        {
+            var site = FriendlyTowers
+                .OrderBy(s => s.hp)
+                .Where(s => s.hp < 300)
+                .First();
+            Console.WriteLine($"BUILD {site.siteId} TOWER");
         }
         else
         {
@@ -76,11 +106,36 @@ class Player
         var archerBarracks = FriendlyBarracks
             .Where(s => s.creepType == CreepType.Archer)
             .OrderBy(s => s.distanceFrom(EnemyQueen));
+        var giantBarracks = FriendlyBarracks
+            .Where(s => s.creepType == CreepType.Giant)
+            .OrderBy(s => s.distanceFrom(EnemyQueen));
         var knightBarracks = FriendlyBarracks
             .Where(s => s.creepType == CreepType.Knight)
             .OrderBy(s => s.distanceFrom(EnemyQueen));
 
-        if (knightBarracks.Count() > 0 && Gold > 80)
+        if (EnemyTowers.Count() >= 3 && giantBarracks.Count() > 0)
+        {
+            /*if (Gold >= 220)
+            {
+                Console.WriteLine($"TRAIN {giantBarracks.First().siteId} {knightBarracks.First().siteId}");
+            }*/
+            if (Gold >= 180)
+            {
+                Console.WriteLine($"TRAIN {giantBarracks.First().siteId}");
+            }
+            else if (Gold >= 80
+                && Units
+                    .Where(s => s.unitType == UnitType.Giant && s.owner == OwnerType.Friendly)
+                    .Count() > 0)
+            {
+                Console.WriteLine($"TRAIN {knightBarracks.First().siteId}");
+            }
+            else
+            {
+                Console.WriteLine("TRAIN");
+            }
+        }
+        else if (knightBarracks.Count() > 0 && Gold > 80)
         {
             Console.WriteLine($"TRAIN {knightBarracks.First().siteId}");
         }
@@ -425,7 +480,7 @@ class Tower : Site
 
 enum UnitType
 {
-    Queen = -1, Knight, Archer
+    Queen = -1, Knight, Archer, Giant
 }
 
 class Unit : Physical
