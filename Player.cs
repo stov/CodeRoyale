@@ -19,7 +19,18 @@ class Player
 
     static void QueenAction()
     {
-        if (FriendlyGoldmines.Count() == 0)
+        if (EnemyKnights.Count() > 0
+            //&& FriendlyTowers.Count() <= 2
+            && FriendlyQueen.nearestUnit(UnitType.Knight, OwnerType.Enemy).distanceFrom(FriendlyQueen) < 200
+            && EnemyKnights.Where(s => s.distanceFrom(FriendlyQueen) < 400).Count() > 2)
+        {
+            var knight = FriendlyQueen.nearestUnit(UnitType.Knight, OwnerType.Enemy);
+            var targetX = (knight.x < FriendlyQueen.x) ? FriendlyQueen.x + Math.Abs(FriendlyQueen.x - knight.x) : FriendlyQueen.x - Math.Abs(FriendlyQueen.x - knight.x);
+            var targetY = (knight.y < FriendlyQueen.y) ? FriendlyQueen.y + Math.Abs(FriendlyQueen.y - knight.y) : FriendlyQueen.y - Math.Abs(FriendlyQueen.y - knight.y);
+
+            Console.WriteLine($"MOVE {targetX} {targetY}");
+        }
+        else if (FriendlyGoldmines.Count() <= 1)
         {
             var site = FriendlyQueen.nearestSite(StructureType.None, OwnerType.None);
             Console.WriteLine($"BUILD {site.siteId} MINE");
@@ -36,39 +47,52 @@ class Player
         }
         else if (TouchedSite != -1 && CurrentSite.structureType == StructureType.Tower && CurrentSite.owner == OwnerType.Friendly
             && (new Tower(CurrentSite)).hp < 300
-            && FriendlyTowers.Count() <= 3)
+            && FriendlyTowers.Count() <= 3
+            && CurrentSite.IsInsideEnemyTowerRange() == false)
         {
             Console.WriteLine($"BUILD {CurrentSite.siteId} TOWER");
         }
         else if (TouchedSite != -1 && CurrentSite.structureType == StructureType.Tower && CurrentSite.owner == OwnerType.Friendly
             && (new Tower(CurrentSite)).hp < 600
-            && FriendlyTowers.Count() <= 4)
+            && FriendlyTowers.Count() <= 4
+            && CurrentSite.IsInsideEnemyTowerRange() == false)
         {
             Console.WriteLine($"BUILD {CurrentSite.siteId} TOWER");
         }
         else if (FriendlyTowers.Count() <= 3)
         {
-            var site = FriendlyQueen.nearestSite(StructureType.None);
+            var site = FriendlyQueen.nearestSite(StructureType.None, OwnerType.None, false);
             Console.WriteLine($"BUILD {site.siteId} TOWER");
         }
         else if (FriendlyBarracks.Where(s => s.creepType == CreepType.Knight).Count() == 0)
         {
-            var site = FriendlyQueen.nearestSite(StructureType.None, OwnerType.None);
+            var site = FriendlyQueen.nearestSite(StructureType.None, OwnerType.None, false);
             Console.WriteLine($"BUILD {site.siteId} BARRACKS-KNIGHT");
         }
-        else if (FriendlyGoldmines.Count() < 2)
+        else if (FriendlyGoldmines.Count() <= 2)
         {
-            /*var site = VacantSites
+            Site site;
+            var sites = Sites
                 .OrderBy(s => s.distanceFrom(FriendlyQueen))
-                .Where(s => s.distanceFrom(EnemyQueen) > EnemyQueen.distanceFrom(FriendlyQueen))
-                .Where(s => s.distanceFrom(s.nearestSite(StructureType.Tower, OwnerType.Enemy)) > 400)
-                .First();*/
-            var site = FriendlyQueen.nearestSite(StructureType.None, OwnerType.None);
+                .Where(s => s.structureType == StructureType.None)
+                .Where(s => s.gold != 0)
+                //&& s => s.distanceFrom(s.nearestSite(StructureType.Tower, OwnerType.Enemy)) > 400
+                .Where(s => s.IsInsideEnemyTowerRange() == false);
+            
+            if (EnemyKnights.Count() > 0)
+            {
+                site = sites.First(s => s.distanceFrom(s.nearestUnit(UnitType.Knight, OwnerType.Enemy)) > 200);
+            }
+            else
+            {
+                site = sites.First();
+            }
+            
             Console.WriteLine($"BUILD {site.siteId} MINE");
         }
         else if (FriendlyBarracks.Where(s => s.creepType == CreepType.Giant).Count() == 0)
         {
-            var site = FriendlyQueen.nearestSite(StructureType.None, OwnerType.None);
+            var site = FriendlyQueen.nearestSite(StructureType.None, OwnerType.None, false);
             Console.WriteLine($"BUILD {site.siteId} BARRACKS-GIANT");
         }
         else if (FriendlyTowers.Where(s => s.hp < 300).Count() > 0)
@@ -76,12 +100,13 @@ class Player
             var site = FriendlyTowers
                 .OrderBy(s => s.hp)
                 .Where(s => s.hp < 300)
+                .Where(s => s.IsInsideEnemyTowerRange() == false)
                 .First();
             Console.WriteLine($"BUILD {site.siteId} TOWER");
         }
         else if (FriendlyBarracks.Where(s => s.creepType == CreepType.Giant).Count() == 0)
         {
-            var site = FriendlyQueen.nearestSite(StructureType.None, OwnerType.None);
+            var site = FriendlyQueen.nearestSite(StructureType.None, OwnerType.None, false);
             Console.WriteLine($"BUILD {site.siteId} BARRACKS-GIANT");
         }
         else if (FriendlyTowers.Where(s => s.hp < 300).Count() > 0)
@@ -89,15 +114,62 @@ class Player
             var site = FriendlyTowers
                 .OrderBy(s => s.hp)
                 .Where(s => s.hp < 300)
+                .Where(s => s.IsInsideEnemyTowerRange() == false)
                 .First();
             Console.WriteLine($"BUILD {site.siteId} TOWER");
+        }
+        else if (FriendlyGoldmines.Where(s => s.incomeRate < s.maxMineSize).Where(s => s.IsInsideEnemyTowerRange() == false).Count() > 0)
+        {
+            var site = FriendlyGoldmines
+                .Where(s => s.incomeRate < s.maxMineSize)
+                .Where(s => s.IsInsideEnemyTowerRange() == false)
+                .OrderBy(s => s.distanceFrom(FriendlyQueen))
+                .First();
+            Console.WriteLine($"BUILD {site.siteId} MINE");
         }
         else
         {
             var site = FriendlyTowers
-                .OrderByDescending(s => s.distanceFrom(EnemyQueen))
+                .OrderBy(s => s.hp)
+                .Where(s => s.IsInsideEnemyTowerRange() == false)
                 .First();
             Console.WriteLine($"BUILD {site.siteId} TOWER");
+
+            /*Site site;
+            var sites = VacantSites
+                .OrderBy(s => s.distanceFrom(FriendlyQueen))
+                .Where(s => s.IsInsideEnemyTowerRange() == false)
+                .Where(s => s.distanceFrom(EnemyQueen) < FriendlyQueen.distanceFrom(EnemyQueen));
+
+            if (sites.Count() > 0)
+            {
+                site = sites.First();
+                Console.WriteLine($"BUILD {site.siteId} TOWER");
+                return;
+            }
+            else
+            {
+                sites = VacantSites
+                    .OrderBy(s => s.distanceFrom(FriendlyQueen))
+                    .Where(s => s.IsInsideEnemyTowerRange() == false)
+                    .Where(s => s.distanceFrom(EnemyQueen) < FriendlyQueen.distanceFrom(EnemyQueen));
+            }
+
+            if (sites.Count() > 0)
+            {
+                site = sites.First();
+                Console.WriteLine($"BUILD {site.siteId} TOWER");
+                return;
+            }
+            else
+            {
+                site = FriendlyTowers
+                    .OrderBy(s => s.hp)
+                    .Where(s => s.IsInsideEnemyTowerRange() == false)
+                    .First();
+                Console.WriteLine($"BUILD {site.siteId} TOWER");
+                return;
+            }*/
         }
     }
 
@@ -213,6 +285,15 @@ class Player
         get
         {
             return Units.First(u => u.unitType == UnitType.Queen
+                && u.owner == OwnerType.Enemy);
+        }
+    }
+
+    public static IEnumerable<Unit> EnemyKnights
+    {
+        get
+        {
+            return Units.Where(u => u.unitType == UnitType.Knight
                 && u.owner == OwnerType.Enemy);
         }
     }
@@ -341,8 +422,8 @@ class Site : Physical
     public int siteId { get; set; }
     public int radius { get; set; }
 
-    public int ignore1 { get; set; } // used in future leagues
-    public int ignore2 { get; set; } // used in future leagues
+    public int gold { get; set; } // used in future leagues
+    public int maxMineSize { get; set; } // used in future leagues
     public StructureType structureType { get; set; }
     public int param1 { get; set; }
     /* When no structure: -1
@@ -373,8 +454,8 @@ class Site : Physical
 
     public void Update(string[] inputs)
     {
-        ignore1 = int.Parse(inputs[1]);
-        ignore2 = int.Parse(inputs[2]);
+        gold = int.Parse(inputs[1]);
+        maxMineSize = int.Parse(inputs[2]);
         structureType = (StructureType)int.Parse(inputs[3]);
         owner = (OwnerType)int.Parse(inputs[4]);
         param1 = int.Parse(inputs[5]);
@@ -390,8 +471,8 @@ class GoldMine : Site
         this.x = site.x;
         this.y = site.y;
         this.radius = site.radius;
-        this.ignore1 = site.ignore1;
-        this.ignore2 = site.ignore2;
+        this.gold = site.gold;
+        this.maxMineSize = site.maxMineSize;
         this.structureType = site.structureType;
         this.owner = site.owner;
         this.param1 = site.param1;
@@ -420,8 +501,8 @@ class Barracks : Site
         this.x = site.x;
         this.y = site.y;
         this.radius = site.radius;
-        this.ignore1 = site.ignore1;
-        this.ignore2 = site.ignore2;
+        this.gold = site.gold;
+        this.maxMineSize = site.maxMineSize;
         this.structureType = site.structureType;
         this.owner = site.owner;
         this.param1 = site.param1;
@@ -453,8 +534,8 @@ class Tower : Site
         this.x = site.x;
         this.y = site.y;
         this.radius = site.radius;
-        this.ignore1 = site.ignore1;
-        this.ignore2 = site.ignore2;
+        this.gold = site.gold;
+        this.maxMineSize = site.maxMineSize;
         this.structureType = site.structureType;
         this.owner = site.owner;
         this.param1 = site.param1;
@@ -557,5 +638,22 @@ class Physical
             .First(s => s.structureType == structureType
                 && s.owner == owner);
         return site;
+    }
+
+    public Site nearestSite(StructureType structureType, OwnerType owner, bool isInsideEnemyTowerRange)
+    {
+        var site = Player.Sites
+            .OrderBy(s => s.distanceFrom(this))
+            .First(s => s.structureType == structureType
+                && s.owner == owner
+                && s.IsInsideEnemyTowerRange() == isInsideEnemyTowerRange);
+        return site;
+    }
+
+    public bool IsInsideEnemyTowerRange()
+    {
+        return Player.EnemyTowers
+            .Where(s => s.distanceFrom(this) < s.range)
+            .Count() > 0;
     }
 }
