@@ -16,19 +16,48 @@ class Player
     - Train archers whenever we have enough gold
     - Trap enemy queen with towers
     */
+    static void DefendQueen()
+    {
+        Site site;
+        if (FriendlyTowers.Count() > 0)
+        {
+            //site = FriendlyQueen.nearestSite(StructureType.Tower, OwnerType.Friendly, false);
+            site = FriendlyTowers
+                .OrderByDescending(s => s.distanceFrom(EnemyQueen))
+                .First();
+        }
+        else
+        {
+            site = FriendlyQueen.nearestSite(StructureType.None, OwnerType.None, false);
+        }
+
+        Console.WriteLine($"BUILD {site.siteId} TOWER");
+    }
 
     static void QueenAction()
     {
         if (EnemyKnights.Count() > 0
-            //&& FriendlyTowers.Count() <= 2
+            && FriendlyTowers.Count() >= 3
             && FriendlyQueen.nearestUnit(UnitType.Knight, OwnerType.Enemy).distanceFrom(FriendlyQueen) < 200
-            && EnemyKnights.Where(s => s.distanceFrom(FriendlyQueen) < 400).Count() > 2)
+            && EnemyKnights.Where(s => s.distanceFrom(FriendlyQueen) < 400).Count() >= 3)
         {
-            var knight = FriendlyQueen.nearestUnit(UnitType.Knight, OwnerType.Enemy);
+            DefendQueen();
+
+            /*var knight = FriendlyQueen.nearestUnit(UnitType.Knight, OwnerType.Enemy);
             var targetX = (knight.x < FriendlyQueen.x) ? FriendlyQueen.x + Math.Abs(FriendlyQueen.x - knight.x) : FriendlyQueen.x - Math.Abs(FriendlyQueen.x - knight.x);
             var targetY = (knight.y < FriendlyQueen.y) ? FriendlyQueen.y + Math.Abs(FriendlyQueen.y - knight.y) : FriendlyQueen.y - Math.Abs(FriendlyQueen.y - knight.y);
 
-            Console.WriteLine($"MOVE {targetX} {targetY}");
+            Console.WriteLine($"MOVE {targetX} {targetY}");*/
+        }
+        else if (TouchedSite != -1
+            && CurrentSite.structureType == StructureType.Goldmine
+            && CurrentSite.owner == OwnerType.Friendly
+            && new GoldMine(CurrentSite).incomeRate < new GoldMine(CurrentSite).maxMineSize
+            && (EnemyKnights.Count() == 0 || CurrentSite.distanceFrom(CurrentSite.nearestUnit(UnitType.Knight, OwnerType.Enemy)) > 200)
+            && CurrentSite.IsInsideEnemyTowerRange() == false)
+        {
+            var site = CurrentSite;
+            Console.WriteLine($"BUILD {site.siteId} MINE");
         }
         else if (FriendlyGoldmines.Count() <= 1)
         {
@@ -46,14 +75,14 @@ class Player
             Console.WriteLine($"BUILD {site.siteId} TOWER");
         }
         else if (TouchedSite != -1 && CurrentSite.structureType == StructureType.Tower && CurrentSite.owner == OwnerType.Friendly
-            && (new Tower(CurrentSite)).hp < 300
+            && (new Tower(CurrentSite)).hp < 250
             && FriendlyTowers.Count() <= 3
             && CurrentSite.IsInsideEnemyTowerRange() == false)
         {
             Console.WriteLine($"BUILD {CurrentSite.siteId} TOWER");
         }
         else if (TouchedSite != -1 && CurrentSite.structureType == StructureType.Tower && CurrentSite.owner == OwnerType.Friendly
-            && (new Tower(CurrentSite)).hp < 600
+            && (new Tower(CurrentSite)).hp < 500
             && FriendlyTowers.Count() <= 4
             && CurrentSite.IsInsideEnemyTowerRange() == false)
         {
